@@ -7,6 +7,7 @@ export default function PropertyCard({ property, isFav, onFavToggle }) {
   const navigate = useNavigate();
   const [fav, setFav] = useState(isFav);
   const [loading, setLoading] = useState(false);
+  const imgurl = "https://ecraswala.alwaysdata.net/static/uploads/"
 
   const formatPrice = (p) =>
     new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(p / 100);
@@ -34,10 +35,10 @@ export default function PropertyCard({ property, isFav, onFavToggle }) {
     <div style={styles.card} onClick={() => navigate(`/listings/${property.property_id}`)}>
       <div style={styles.imgWrap}>
         <img
-          src={property.property_photo}
+          src={imgurl +property.property_photo}
           alt={property.property_name}
           style={styles.img}
-          onError={e => { e.target.src = "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800"; }}
+        
         />
         <div style={styles.overlay} />
         {property.property_featured === 1 && (

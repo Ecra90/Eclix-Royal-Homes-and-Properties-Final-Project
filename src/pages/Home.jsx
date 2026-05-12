@@ -13,14 +13,13 @@ export default function Home() {
   const [featured, setFeatured] = useState([]);
   const [search, setSearch] = useState("");
   const navigate = useNavigate();
-
   useEffect(() => {
     const t = setInterval(() => setSlide(s => (s + 1) % SLIDES.length), 4500);
     return () => clearInterval(t);
   }, []);
 
   useEffect(() => {
-    fetch("/api/properties?featured=1", { credentials: "include" })
+    fetch("/api/properties", { credentials: "include" })
       .then(r => r.json())
       .then(d => setFeatured(d.properties || []));
   }, []);

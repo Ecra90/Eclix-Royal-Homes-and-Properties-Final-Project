@@ -43,6 +43,20 @@ export default function Navbar() {
             {l.label}
           </Link>
         ))}
+
+        {/* Add Property — only when logged in */}
+        {user && (
+          <Link
+            to="/addproperty"
+            style={{
+              ...styles.link,
+              ...(isActive("/addproperty") ? styles.activeLink : {}),
+              ...styles.addPropertyLink,
+            }}
+          >
+            ＋ Add Property
+          </Link>
+        )}
       </div>
 
       {/* Auth buttons */}
@@ -73,6 +87,18 @@ export default function Navbar() {
               {l.label}
             </Link>
           ))}
+
+          {/* Add Property in mobile menu — only when logged in */}
+          {user && (
+            <Link
+              to="/addproperty"
+              style={{ ...styles.mobileLink, ...styles.mobileAddProperty }}
+              onClick={() => setMenuOpen(false)}
+            >
+              ＋ Add Property
+            </Link>
+          )}
+
           {user ? (
             <>
               <Link to="/dashboard" style={styles.mobileLink} onClick={() => setMenuOpen(false)}>Dashboard</Link>
@@ -111,7 +137,6 @@ const styles = {
   brandAccent: { color: "#d4af37" },
   links: {
     display: "flex", gap: "8px", alignItems: "center",
-    "@media(max-width:768px)": { display: "none" },
   },
   link: {
     color: "#c9c5b8", textDecoration: "none",
@@ -122,6 +147,18 @@ const styles = {
     fontWeight: 600,
   },
   activeLink: { color: "#d4af37", borderBottom: "1px solid #d4af37" },
+
+  // Add Property pill — stands out from regular nav links
+  addPropertyLink: {
+    color: "#0a0e1a",
+    background: "#d4af37",
+    borderRadius: "4px",
+    padding: "6px 12px",
+    fontWeight: 700,
+    letterSpacing: "0.06em",
+    marginLeft: "6px",
+  },
+
   authArea: { display: "flex", alignItems: "center" },
   userArea: { display: "flex", alignItems: "center", gap: "10px" },
   username: { color: "#d4af37", fontSize: "0.85rem", fontFamily: "'Cormorant Garamond', serif" },
@@ -148,7 +185,6 @@ const styles = {
   hamburger: {
     display: "none", background: "none", border: "none",
     color: "#d4af37", fontSize: "1.5rem", cursor: "pointer",
-    "@media(max-width:900px)": { display: "block" },
   },
   mobileMenu: {
     position: "fixed", top: "70px", left: 0, right: 0,
@@ -160,6 +196,10 @@ const styles = {
     color: "#c9c5b8", textDecoration: "none", padding: "12px 0",
     borderBottom: "1px solid rgba(255,255,255,0.06)",
     fontFamily: "'Cormorant Garamond', serif", fontSize: "1rem",
+  },
+  mobileAddProperty: {
+    color: "#d4af37",
+    fontWeight: 700,
   },
   mobileLogout: {
     background: "none", border: "none", color: "#c9c5b8",
