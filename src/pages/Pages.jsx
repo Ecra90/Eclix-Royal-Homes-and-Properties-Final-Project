@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import PropertyCard from "../components/PropertyCard";
+import PropertyCard, { getFavourites } from "../components/PropertyCard";
 
 // ─── DASHBOARD ───────────────────────────────────────────────────────────────
 export function Dashboard() {
@@ -91,10 +91,36 @@ export function Favourites() {
 
   useEffect(() => {
     if (!user) { navigate("/login"); return; }
-    fetch("/api/favourites", { credentials: "include" })
+
+    // 1. Get saved property IDs from localStorage
+    const savedIds = getFavourites();
+
+    if (savedIds.length === 0) {
+      setFavs([]);
+      setLoading(false);
+      return;
+    }
+
+    // 2. Fetch all properties, then filter to only the saved ones
+    fetch("/api/properties", { credentials: "include" })
       .then(r => r.json())
-      .then(d => { setFavs(d.favourites || []); setLoading(false); });
+      .then(d => {
+        const allProperties = d.properties || [];
+        const saved = allProperties.filter(p =>
+          savedIds.includes(p.property_id)
+        );
+        setFavs(saved);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
   }, [user, navigate]);
+
+  // When user un-hearts a card, remove it from the displayed list
+  const handleFavToggle = (propertyId, isNowFav) => {
+    if (!isNowFav) {
+      setFavs(fs => fs.filter(f => f.property_id !== propertyId));
+    }
+  };
 
   return (
     <div style={styles.page}>
@@ -116,8 +142,7 @@ export function Favourites() {
               <PropertyCard
                 key={p.property_id}
                 property={p}
-                isFav={true}
-                onFavToggle={(id) => setFavs(fs => fs.filter(f => f.property_id !== id))}
+                onFavToggle={handleFavToggle}
               />
             ))}
           </div>
@@ -269,7 +294,6 @@ const styles = {
     border: "none", borderRadius: "8px",
     fontWeight: 800, fontSize: "0.85rem", cursor: "pointer", marginTop: "16px",
   },
-  // Dashboard
   profileHeader: {
     display: "flex", alignItems: "center", gap: "20px",
     background: "#111827", borderRadius: "16px",
@@ -312,7 +336,6 @@ const styles = {
     border: "1px solid", padding: "4px 12px", borderRadius: "20px",
     fontSize: "0.7rem", letterSpacing: "0.1em", margin: "16px",
   },
-  // Values
   valuesGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "24px" },
   valueCard: {
     background: "#111827", padding: "32px",
@@ -320,7 +343,6 @@ const styles = {
     display: "flex", flexDirection: "column", gap: "12px",
   },
   valueTitle: { color: "#d4af37", fontFamily: "'Playfair Display', serif", margin: 0 },
-  // Contact
   contactRow: { marginBottom: "20px" },
   contactLabel: { color: "#6b7280", fontSize: "0.75rem", letterSpacing: "0.08em", margin: "0 0 4px" },
   contactValue: { color: "#f8f4e8", fontSize: "0.95rem", margin: 0 },
@@ -332,7 +354,6 @@ const styles = {
     background: "#0a0e1a", color: "#f8f4e8", fontSize: "0.9rem",
     marginBottom: "20px", boxSizing: "border-box", outline: "none",
   },
-  // Interiors
   interiorCard: { background: "#111827", borderRadius: "16px", overflow: "hidden", border: "1px solid rgba(212,175,55,0.1)" },
   interiorImg: { width: "100%", height: "220px", objectFit: "cover" },
   interiorInfo: { padding: "20px" },

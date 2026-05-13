@@ -2,32 +2,76 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
-export default function PropertyCard({ property, isFav, onFavToggle }) {
+// ─── localStorage helpers ────────────────────────────────────────────────────
+const FAVS_KEY = "eclix_favourites";
+
+function getFavourites() {
+  try {
+    return JSON.parse(localStorage.getItem(FAVS_KEY)) || [];
+  } catch {
+    return [];
+  }
+}
+
+function isFavourite(propertyId) {
+  return getFavourites().includes(propertyId);
+}
+
+function addFavourite(propertyId) {
+  const favs = getFavourites();
+  if (!favs.includes(propertyId)) {
+    localStorage.setItem(FAVS_KEY, JSON.stringify([...favs, propertyId]));
+  }
+}
+
+function removeFavourite(propertyId) {
+  const favs = getFavourites().filter((id) => id !== propertyId);
+  localStorage.setItem(FAVS_KEY, JSON.stringify(favs));
+}
+
+// ─── Export helpers so other pages (e.g. Favourites page) can use them ───────
+export { getFavourites, isFavourite, addFavourite, removeFavourite };
+
+// ─── Component ───────────────────────────────────────────────────────────────
+export default function PropertyCard({ property, onFavToggle }) {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [fav, setFav] = useState(isFav);
-  const [loading, setLoading] = useState(false);
-  const imgurl = "https://ecraswala.alwaysdata.net/static/uploads/"
+
+  // Initialise fav state directly from localStorage — no prop needed
+  const [fav, setFav] = useState(() => isFavourite(property.property_id));
+
+  const imgurl = "https://ecraswala.alwaysdata.net/static/uploads/";
 
   const formatPrice = (p) =>
-    new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(p / 100);
+    new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      maximumFractionDigits: 0,
+    }).format(p / 100);
 
-  const handleFav = async (e) => {
+  const handleFav = (e) => {
     e.stopPropagation();
-    if (!user) { navigate("/login"); return; }
-    setLoading(true);
-    const method = fav ? "DELETE" : "POST";
-    await fetch(`/api/favourites/${property.property_id}`, {
-      method, credentials: "include",
-    });
+    if (!user) {
+      navigate("/login");
+      return;
+    }
+
+    if (fav) {
+      removeFavourite(property.property_id);
+    } else {
+      addFavourite(property.property_id);
+    }
+
     setFav(!fav);
     if (onFavToggle) onFavToggle(property.property_id, !fav);
-    setLoading(false);
   };
 
   const handleBook = (e) => {
     e.stopPropagation();
-    if (!user) { navigate("/login"); return; }
+    if (!user) {
+      navigate("/login");
+      return;
+    }
     navigate(`/listings/${property.property_id}/book`);
   };
 
@@ -35,10 +79,9 @@ export default function PropertyCard({ property, isFav, onFavToggle }) {
     <div style={styles.card} onClick={() => navigate(`/listings/${property.property_id}`)}>
       <div style={styles.imgWrap}>
         <img
-          src={imgurl +property.property_photo}
+          src={imgurl + property.property_photo}
           alt={property.property_name}
           style={styles.img}
-        
         />
         <div style={styles.overlay} />
         {property.property_featured === 1 && (
@@ -47,7 +90,6 @@ export default function PropertyCard({ property, isFav, onFavToggle }) {
         <button
           style={{ ...styles.favBtn, ...(fav ? styles.favActive : {}) }}
           onClick={handleFav}
-          disabled={loading}
           title={fav ? "Remove from favourites" : "Save to favourites"}
         >
           {fav ? "❤️" : "🤍"}
@@ -62,7 +104,9 @@ export default function PropertyCard({ property, isFav, onFavToggle }) {
         <div style={styles.specs}>
           <span style={styles.spec}>🛏 {property.property_beds} beds</span>
           <span style={styles.spec}>🚿 {property.property_bath} baths</span>
-          {property.property_size && <span style={styles.spec}>📐 {property.property_size}m²</span>}
+          {property.property_size && (
+            <span style={styles.spec}>📐 {property.property_size}m²</span>
+          )}
         </div>
 
         <div style={styles.footer}>
@@ -84,7 +128,6 @@ const styles = {
     cursor: "pointer",
     transition: "transform 0.3s ease, box-shadow 0.3s ease",
     border: "1px solid rgba(212,175,55,0.1)",
-    ":hover": { transform: "translateY(-6px)" },
   },
   imgWrap: { position: "relative", height: "220px", overflow: "hidden" },
   img: { width: "100%", height: "100%", objectFit: "cover", transition: "transform 0.5s ease" },
