@@ -71,7 +71,7 @@ export default function Footer() {
 
       <div style={styles.bottom}>
         <p style={{ color: "#4b5563", fontSize: "0.8rem" }}>
-          © 2026 Eclix Royal Homes. All rights reserved.
+          © 2026 Eclix Royal Homes. All rights reserved..
         </p>
         <div style={{ display: "flex", gap: "20px" }}>
           <a href="tel:+254724091668" style={styles.contactBtn}>📞 Call Now</a>
