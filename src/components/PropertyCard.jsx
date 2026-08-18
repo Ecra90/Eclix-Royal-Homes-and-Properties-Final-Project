@@ -2,23 +2,16 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
-// ─────────────────────────────────────────────
-// localStorage helpers
-// ─────────────────────────────────────────────
-
 const FAVS_KEY = "eclix_favourites";
 
 function getFavourites() {
   try {
     const saved = localStorage.getItem(FAVS_KEY);
-
     if (!saved) return [];
 
     const parsed = JSON.parse(saved);
-
     return Array.isArray(parsed) ? parsed : [];
-  } catch (error) {
-    console.error("Could not read favourites:", error);
+  } catch {
     return [];
   }
 }
@@ -56,10 +49,6 @@ export {
   removeFavourite,
 };
 
-// ─────────────────────────────────────────────
-// Property Card
-// ─────────────────────────────────────────────
-
 export default function PropertyCard({
   property,
   onFavToggle,
@@ -71,20 +60,37 @@ export default function PropertyCard({
     isFavourite(property.property_id)
   );
 
-  // Your Flask backend
-  const API_URL =
-    "https://eclixroyalhomesbackendapi.vercel.app";
+  /*
+   * IMAGE URL
+   *
+   * If the backend gives us a complete Cloudinary URL,
+   * use it directly.
+   *
+   * If it gives us an old filename, use the backend
+   * static/uploads path.
+   */
+  const getImageUrl = () => {
+    const photo = property?.property_photo;
 
-  // Property image
-  const imageUrl = property.property_photo
-    ? `${API_URL}/static/uploads/${encodeURIComponent(
-        property.property_photo
-      )}`
-    : "/placeholder-property.jpg";
+    if (!photo) {
+      return "/placeholder-property.jpg";
+    }
 
-  // ─────────────────────────────────────────────
-  // Format price
-  // ─────────────────────────────────────────────
+    // Cloudinary / external URL
+    if (
+      photo.startsWith("http://") ||
+      photo.startsWith("https://")
+    ) {
+      return photo;
+    }
+
+    // Old database records containing only filename
+    return `https://eclixroyalhomesbackendapi.vercel.app/static/uploads/${encodeURIComponent(
+      photo
+    )}`;
+  };
+
+  const imageUrl = getImageUrl();
 
   const formatPrice = (price) => {
     const numericPrice = Number(price);
@@ -99,10 +105,6 @@ export default function PropertyCard({
       maximumFractionDigits: 0,
     }).format(numericPrice / 100);
   };
-
-  // ─────────────────────────────────────────────
-  // Favourite
-  // ─────────────────────────────────────────────
 
   const handleFav = (e) => {
     e.stopPropagation();
@@ -130,10 +132,6 @@ export default function PropertyCard({
     }
   };
 
-  // ─────────────────────────────────────────────
-  // Booking
-  // ─────────────────────────────────────────────
-
   const handleBook = (e) => {
     e.stopPropagation();
 
@@ -146,10 +144,6 @@ export default function PropertyCard({
       `/listings/${property.property_id}/book`
     );
   };
-
-  // ─────────────────────────────────────────────
-  // Open property
-  // ─────────────────────────────────────────────
 
   const handleCardClick = () => {
     navigate(
@@ -171,7 +165,14 @@ export default function PropertyCard({
             "Eclix property"
           }
           style={styles.img}
+          loading="lazy"
           onError={(e) => {
+            console.error(
+              "Property image failed:",
+              imageUrl
+            );
+
+            e.currentTarget.onerror = null;
             e.currentTarget.src =
               "/placeholder-property.jpg";
           }}
@@ -204,10 +205,12 @@ export default function PropertyCard({
         </button>
       </div>
 
-      {/* INFORMATION */}
+      {/* PROPERTY INFORMATION */}
       <div style={styles.info}>
         <div style={styles.location}>
-          📍 {property.property_location || "Location unavailable"}
+          📍{" "}
+          {property.property_location ||
+            "Location unavailable"}
         </div>
 
         <h3 style={styles.name}>
@@ -217,10 +220,12 @@ export default function PropertyCard({
 
         <p style={styles.desc}>
           {property.property_description
-            ? property.property_description.slice(
-                0,
-                90
-              ) + "..."
+            ? property.property_description.length > 90
+              ? property.property_description.slice(
+                  0,
+                  90
+                ) + "..."
+              : property.property_description
             : "Luxury property available through Eclix Royal Homes & Properties."}
         </p>
 
@@ -264,10 +269,6 @@ export default function PropertyCard({
   );
 }
 
-// ─────────────────────────────────────────────
-// Styles
-// ─────────────────────────────────────────────
-
 const styles = {
   card: {
     background: "#111827",
@@ -284,15 +285,16 @@ const styles = {
     position: "relative",
     height: "220px",
     overflow: "hidden",
+    background: "#0a0e1a",
   },
 
   img: {
     width: "100%",
     height: "100%",
     objectFit: "cover",
+    display: "block",
     transition:
       "transform 0.5s ease",
-    display: "block",
   },
 
   overlay: {
@@ -300,6 +302,7 @@ const styles = {
     inset: 0,
     background:
       "linear-gradient(to bottom, transparent 40%, rgba(10,14,26,0.7))",
+    pointerEvents: "none",
   },
 
   badge: {
@@ -382,8 +385,7 @@ const styles = {
   footer: {
     display: "flex",
     alignItems: "center",
-    justifyContent:
-      "space-between",
+    justifyContent: "space-between",
     gap: "10px",
   },
 
