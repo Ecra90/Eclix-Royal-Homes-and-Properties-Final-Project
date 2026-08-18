@@ -199,7 +199,7 @@ export function Contact() {
       <div style={{ ...styles.container, display: "grid", gridTemplateColumns: "1fr 1fr", gap: "40px", paddingTop: "60px" }}>
         <div>
           <h2 style={styles.sectionTitle}>Our Details</h2>
-          {[["📧 Email", "info@eclixroyalhomes.com"], ["📞 Phone", "+254 724 091 668"], ["📍 Office", "Nairobi, Kenya"], ["🕒 Hours", "Mon–Sat, 8am–6pm EAT"]].map(([l, v]) => (
+          {[["📧 Email", "info@eclixroyalhomes.com"], ["📞 Phone", "+254 711 764 131"], ["📍 Office", "Nairobi, Kenya"], ["🕒 Hours", "Mon–Sat, 8am–6pm EAT"]].map(([l, v]) => (
             <div key={l} style={styles.contactRow}>
               <p style={styles.contactLabel}>{l}</p>
               <p style={styles.contactValue}>{v}</p>

@@ -45,7 +45,7 @@ export default function Footer() {
         <div>
           <h3 style={styles.heading}>Contact</h3>
           <p style={styles.p}>📧 info@eclixroyalhomes.com</p>
-          <p style={styles.p}>📞 +254 724 091 668</p>
+          <p style={styles.p}>📞 +2547 11 764 131</p>
           <p style={styles.p}>📍 Nairobi, Kenya</p>
           <div style={{ marginTop: "16px" }}>
             <p style={{ ...styles.p, fontSize: "0.75rem", color: "#6b7280" }}>✔ Confidential transactions</p>
@@ -74,15 +74,15 @@ export default function Footer() {
           © 2026 Eclix Royal Homes. All rights reserved..
         </p>
         <div style={{ display: "flex", gap: "20px" }}>
-          <a href="tel:+254724091668" style={styles.contactBtn}>📞 Call Now</a>
-          <a href="https://wa.me/254724091668" target="_blank" rel="noreferrer" style={{ ...styles.contactBtn, background: "#25D366" }}>
+          <a href="tel:+254711764131" style={styles.contactBtn}>📞 Call Now</a>
+          <a href="https://wa.me/254711764131" target="_blank" rel="noreferrer" style={{ ...styles.contactBtn, background: "#25D366" }}>
             💬 WhatsApp
           </a>
         </div>
       </div>
 
       {/* Fixed WhatsApp button */}
-      <a href="https://wa.me/254724091668" target="_blank" rel="noreferrer" style={styles.whatsappFloat}>
+      <a href="https://wa.me/254711764131" target="_blank" rel="noreferrer" style={styles.whatsappFloat}>
         💬
       </a>
     </footer>
