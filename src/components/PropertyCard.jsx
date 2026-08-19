@@ -6,7 +6,9 @@ import { useAuth } from "../context/AuthContext";
 // CONFIG
 // ============================================================
 
-const API_URL = "https://eclixroyalhomesbackendapi.vercel.app";
+const API_URL =
+  "https://eclixroyalhomesbackendapi.vercel.app";
+
 const FAVS_KEY = "eclix_favourites";
 
 // ============================================================
@@ -27,12 +29,15 @@ function getFavourites() {
       return [];
     }
 
-    // Always store IDs as numbers
     return parsed
       .map(Number)
       .filter((id) => !Number.isNaN(id));
   } catch (error) {
-    console.error("Could not read favourites:", error);
+    console.error(
+      "Could not read favourites:",
+      error
+    );
+
     return [];
   }
 }
@@ -55,7 +60,10 @@ function addFavourite(propertyId) {
   if (!favourites.includes(id)) {
     localStorage.setItem(
       FAVS_KEY,
-      JSON.stringify([...favourites, id])
+      JSON.stringify([
+        ...favourites,
+        id,
+      ])
     );
   }
 }
@@ -63,9 +71,11 @@ function addFavourite(propertyId) {
 function removeFavourite(propertyId) {
   const id = Number(propertyId);
 
-  const favourites = getFavourites().filter(
-    (favouriteId) => favouriteId !== id
-  );
+  const favourites =
+    getFavourites().filter(
+      (favouriteId) =>
+        favouriteId !== id
+    );
 
   localStorage.setItem(
     FAVS_KEY,
@@ -91,55 +101,86 @@ export default function PropertyCard({
   const { user } = useAuth();
   const navigate = useNavigate();
 
+  // IMPORTANT:
+  // Hooks MUST be called before any conditional return.
+
+  const [fav, setFav] = useState(() =>
+    property
+      ? isFavourite(
+          Number(property.property_id)
+        )
+      : false
+  );
+
+  const [showPromote, setShowPromote] =
+    useState(false);
+
+  const [selectedPackage, setSelectedPackage] =
+    useState("featured_7");
+
+  const [phone, setPhone] =
+    useState("");
+
+  const [paymentLoading, setPaymentLoading] =
+    useState(false);
+
+  const [paymentMessage, setPaymentMessage] =
+    useState("");
+
+  const [paymentError, setPaymentError] =
+    useState("");
+
   // ----------------------------------------------------------
-  // Safety check
+  // SAFETY CHECK
   // ----------------------------------------------------------
 
   if (!property) {
     return null;
   }
 
-  const propertyId = Number(property.property_id);
-
-  // ----------------------------------------------------------
-  // Favourite state
-  // ----------------------------------------------------------
-
-  const [fav, setFav] = useState(() =>
-    isFavourite(propertyId)
+  const propertyId = Number(
+    property.property_id
   );
 
-const getImageUrl = () => {
-  const photo = property.property_photo;
+  // ==========================================================
+  // IMAGE
+  // ==========================================================
 
-  // No photo
-  if (!photo || typeof photo !== "string") {
-    return "/placeholder-property.jpg";
-  }
+  const getImageUrl = () => {
+    const photo =
+      property.property_photo;
 
-  const cleanPhoto = photo.trim();
+    if (
+      !photo ||
+      typeof photo !== "string"
+    ) {
+      return "/placeholder-property.jpg";
+    }
 
-  if (!cleanPhoto) {
-    return "/placeholder-property.jpg";
-  }
+    const cleanPhoto =
+      photo.trim();
 
-  // Cloudinary or any complete online image URL
-  if (
-    cleanPhoto.startsWith("https://") ||
-    cleanPhoto.startsWith("http://")
-  ) {
-    return cleanPhoto;
-  }
+    if (!cleanPhoto) {
+      return "/placeholder-property.jpg";
+    }
 
-  // If backend returns only a Cloudinary public ID
-  if (cleanPhoto.includes("cloudinary")) {
-    return cleanPhoto;
-  }
+    if (
+      cleanPhoto.startsWith("https://") ||
+      cleanPhoto.startsWith("http://")
+    ) {
+      return cleanPhoto;
+    }
 
-  // Old/local images
-  return `${API_URL}/static/uploads/${encodeURIComponent(cleanPhoto)}`;
-};  
+    if (
+      cleanPhoto.includes("cloudinary")
+    ) {
+      return cleanPhoto;
+    }
 
+    return `${API_URL}/static/uploads/${encodeURIComponent(
+      cleanPhoto
+    )}`;
+  };
 
   // ==========================================================
   // PRICE
@@ -160,26 +201,14 @@ const getImageUrl = () => {
       return "Price on request";
     }
 
-    /*
-     * Your old code divided the price by 100.
-     *
-     * That is only correct if your database stores
-     * prices in cents.
-     *
-     * For a normal property database such as:
-     *
-     * 15000000
-     *
-     * we display:
-     *
-     * KSh 15,000,000
-     */
-
-    return new Intl.NumberFormat("en-KE", {
-      style: "currency",
-      currency: "KES",
-      maximumFractionDigits: 0,
-    }).format(numericPrice);
+    return new Intl.NumberFormat(
+      "en-KE",
+      {
+        style: "currency",
+        currency: "KES",
+        maximumFractionDigits: 0,
+      }
+    ).format(numericPrice);
   };
 
   // ==========================================================
@@ -194,11 +223,15 @@ const getImageUrl = () => {
       return;
     }
 
-    if (!propertyId || Number.isNaN(propertyId)) {
+    if (
+      !propertyId ||
+      Number.isNaN(propertyId)
+    ) {
       console.error(
         "Invalid property ID:",
         property.property_id
       );
+
       return;
     }
 
@@ -212,7 +245,9 @@ const getImageUrl = () => {
 
     setFav(newFavState);
 
-    if (typeof onFavToggle === "function") {
+    if (
+      typeof onFavToggle === "function"
+    ) {
       onFavToggle(
         propertyId,
         newFavState
@@ -232,11 +267,15 @@ const getImageUrl = () => {
       return;
     }
 
-    if (!propertyId || Number.isNaN(propertyId)) {
+    if (
+      !propertyId ||
+      Number.isNaN(propertyId)
+    ) {
       console.error(
         "Invalid property ID:",
         property.property_id
       );
+
       return;
     }
 
@@ -246,15 +285,145 @@ const getImageUrl = () => {
   };
 
   // ==========================================================
+  // PROMOTE PROPERTY
+  // ==========================================================
+
+  const handlePromoteClick = (event) => {
+    event.stopPropagation();
+
+    if (!user) {
+      navigate("/login");
+      return;
+    }
+
+    setPaymentMessage("");
+    setPaymentError("");
+    setShowPromote(true);
+  };
+
+  // ==========================================================
+  // START MPESA PAYMENT
+  // ==========================================================
+
+  const handleMpesaPayment = async (
+    event
+  ) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    setPaymentError("");
+    setPaymentMessage("");
+
+    if (!user) {
+      navigate("/login");
+      return;
+    }
+
+    if (
+      !propertyId ||
+      Number.isNaN(propertyId)
+    ) {
+      setPaymentError(
+        "Invalid property."
+      );
+
+      return;
+    }
+
+    const cleanPhone =
+      phone.trim();
+
+    if (!cleanPhone) {
+      setPaymentError(
+        "Please enter your M-Pesa phone number."
+      );
+
+      return;
+    }
+
+    setPaymentLoading(true);
+
+    try {
+      const response = await fetch(
+        `${API_URL}/api/payments/property-promote`,
+        {
+          method: "POST",
+
+          credentials: "include",
+
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+
+          body: JSON.stringify({
+            property_id: propertyId,
+            package:
+              selectedPackage,
+            phone: cleanPhone,
+          }),
+        }
+      );
+
+      const text =
+        await response.text();
+
+      let data = {};
+
+      try {
+        data = text
+          ? JSON.parse(text)
+          : {};
+      } catch {
+        throw new Error(
+          "The payment server returned an invalid response."
+        );
+      }
+
+      if (!response.ok) {
+        throw new Error(
+          data.error ||
+            data.details ||
+            "Could not start M-Pesa payment."
+        );
+      }
+
+      setPaymentMessage(
+        data.message ||
+          "M-Pesa prompt sent. Check your phone and enter your M-Pesa PIN."
+      );
+
+      setPhone("");
+
+    } catch (error) {
+      console.error(
+        "M-Pesa payment error:",
+        error
+      );
+
+      setPaymentError(
+        error.message ||
+          "Payment could not be started."
+      );
+    } finally {
+      setPaymentLoading(false);
+    }
+  };
+
+  // ==========================================================
   // PROPERTY DETAILS
   // ==========================================================
 
   const handleCardClick = () => {
-    if (!propertyId || Number.isNaN(propertyId)) {
+    if (
+      !propertyId ||
+      Number.isNaN(propertyId)
+    ) {
       console.error(
         "Invalid property ID:",
         property.property_id
       );
+
       return;
     }
 
@@ -273,7 +442,10 @@ const getImageUrl = () => {
 
   const shortDescription =
     description.length > 100
-      ? `${description.substring(0, 100)}...`
+      ? `${description.substring(
+          0,
+          100
+        )}...`
       : description;
 
   // ==========================================================
@@ -281,211 +453,491 @@ const getImageUrl = () => {
   // ==========================================================
 
   return (
-    <article
-      style={styles.card}
-      onClick={handleCardClick}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(event) => {
-        if (
-          event.key === "Enter" ||
-          event.key === " "
-        ) {
-          event.preventDefault();
-          handleCardClick();
-        }
-      }}
-    >
-      {/* =====================================================
-          IMAGE
-      ====================================================== */}
-
-      <div style={styles.imgWrap}>
-        <img
-          src={getImageUrl()}
-          alt={
-            property.property_name ||
-            "Eclix Royal property"
+    <>
+      <article
+        style={styles.card}
+        onClick={handleCardClick}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(event) => {
+          if (
+            event.key === "Enter" ||
+            event.key === " "
+          ) {
+            event.preventDefault();
+            handleCardClick();
           }
-          style={styles.img}
-          loading="lazy"
-          onError={(event) => {
-            if (
-              event.currentTarget.src.includes(
-                "placeholder-property.jpg"
-              )
-            ) {
-              return;
+        }}
+      >
+        {/* ===================================================
+            IMAGE
+        ==================================================== */}
+
+        <div style={styles.imgWrap}>
+          <img
+            src={getImageUrl()}
+            alt={
+              property.property_name ||
+              "Eclix Royal property"
             }
+            style={styles.img}
+            loading="lazy"
+            onError={(event) => {
+              if (
+                event.currentTarget.src.includes(
+                  "placeholder-property.jpg"
+                )
+              ) {
+                return;
+              }
 
-            console.error(
-              "Property image failed:",
-              getImageUrl()
-            );
+              console.error(
+                "Property image failed:",
+                getImageUrl()
+              );
 
-            event.currentTarget.onerror = null;
+              event.currentTarget.onerror =
+                null;
 
-            event.currentTarget.src =
-              "/placeholder-property.jpg";
-          }}
-        />
-
-        {/* Image overlay */}
-        <div style={styles.overlay} />
-
-        {/* =================================================
-            PROPERTY STATUS
-        ================================================== */}
-
-        <div style={styles.badges}>
-          {Number(
-            property.property_featured
-          ) === 1 && (
-            <span style={styles.featuredBadge}>
-              Featured
-            </span>
-          )}
-
-          {Number(
-            property.property_for_sale
-          ) === 1 && (
-            <span style={styles.saleBadge}>
-              For Sale
-            </span>
-          )}
-        </div>
-
-        {/* =================================================
-            FAVOURITE BUTTON
-        ================================================== */}
-
-        <button
-          type="button"
-          style={{
-            ...styles.favBtn,
-            ...(fav ? styles.favActive : {}),
-          }}
-          onClick={handleFav}
-          aria-label={
-            fav
-              ? "Remove property from favourites"
-              : "Add property to favourites"
-          }
-          title={
-            fav
-              ? "Remove from favourites"
-              : "Save to favourites"
-          }
-        >
-          <span
-            style={{
-              fontSize: "18px",
-              lineHeight: 1,
+              event.currentTarget.src =
+                "/placeholder-property.jpg";
             }}
-          >
-            {fav ? "♥" : "♡"}
-          </span>
-        </button>
-      </div>
+          />
 
-      {/* =====================================================
-          INFORMATION
-      ====================================================== */}
+          <div style={styles.overlay} />
 
-      <div style={styles.info}>
+          {/* PROPERTY STATUS */}
 
-        {/* Location */}
-        <div style={styles.location}>
-          <span style={styles.locationIcon}>
-            📍
-          </span>
-
-          <span>
-            {property.property_location ||
-              "Location unavailable"}
-          </span>
-        </div>
-
-        {/* Name */}
-        <h3 style={styles.name}>
-          {property.property_name ||
-            "Unnamed Property"}
-        </h3>
-
-        {/* Description */}
-        <p style={styles.desc}>
-          {shortDescription}
-        </p>
-
-        {/* =================================================
-            PROPERTY SPECS
-        ================================================== */}
-
-        <div style={styles.specs}>
-
-          <span style={styles.spec}>
-            <span style={styles.specIcon}>
-              🛏
-            </span>
-
-            {property.property_beds ||
-              0}{" "}
-            beds
-          </span>
-
-          <span style={styles.spec}>
-            <span style={styles.specIcon}>
-              🚿
-            </span>
-
-            {property.property_bath ||
-              0}{" "}
-            baths
-          </span>
-
-          {property.property_size && (
-            <span style={styles.spec}>
-              <span style={styles.specIcon}>
-                📐
+          <div style={styles.badges}>
+            {Number(
+              property.property_featured
+            ) === 1 && (
+              <span
+                style={
+                  styles.featuredBadge
+                }
+              >
+                ⭐ Featured
               </span>
+            )}
 
-              {property.property_size} m²
+            {Number(
+              property.property_for_sale
+            ) === 1 && (
+              <span
+                style={
+                  styles.saleBadge
+                }
+              >
+                For Sale
+              </span>
+            )}
+          </div>
+
+          {/* FAVOURITE */}
+
+          <button
+            type="button"
+            style={{
+              ...styles.favBtn,
+              ...(fav
+                ? styles.favActive
+                : {}),
+            }}
+            onClick={handleFav}
+            aria-label={
+              fav
+                ? "Remove property from favourites"
+                : "Add property to favourites"
+            }
+            title={
+              fav
+                ? "Remove from favourites"
+                : "Save to favourites"
+            }
+          >
+            <span
+              style={{
+                fontSize: "18px",
+                lineHeight: 1,
+              }}
+            >
+              {fav ? "♥" : "♡"}
             </span>
-          )}
+          </button>
         </div>
 
-        {/* =================================================
-            FOOTER
-        ================================================== */}
+        {/* ===================================================
+            INFORMATION
+        ==================================================== */}
 
-        <div style={styles.footer}>
+        <div style={styles.info}>
+          <div style={styles.location}>
+            <span
+              style={
+                styles.locationIcon
+              }
+            >
+              📍
+            </span>
 
-          {/* Price */}
-          <div>
-            <div style={styles.priceLabel}>
-              Price
-            </div>
-
-            <span style={styles.price}>
-              {formatPrice(
-                property.property_price
-              )}
+            <span>
+              {property.property_location ||
+                "Location unavailable"}
             </span>
           </div>
 
-          {/* Booking */}
-          <button
-            type="button"
-            style={styles.bookBtn}
-            onClick={handleBook}
-          >
-            {user
-              ? "Book Viewing"
-              : "Login to Book"}
-          </button>
+          <h3 style={styles.name}>
+            {property.property_name ||
+              "Unnamed Property"}
+          </h3>
+
+          <p style={styles.desc}>
+            {shortDescription}
+          </p>
+
+          {/* PROPERTY SPECS */}
+
+          <div style={styles.specs}>
+            <span style={styles.spec}>
+              <span
+                style={
+                  styles.specIcon
+                }
+              >
+                🛏
+              </span>
+
+              {property.property_beds ||
+                0}{" "}
+              beds
+            </span>
+
+            <span style={styles.spec}>
+              <span
+                style={
+                  styles.specIcon
+                }
+              >
+                🚿
+              </span>
+
+              {property.property_bath ||
+                0}{" "}
+              baths
+            </span>
+
+            {property.property_size && (
+              <span style={styles.spec}>
+                <span
+                  style={
+                    styles.specIcon
+                  }
+                >
+                  📐
+                </span>
+
+                {property.property_size}{" "}
+                m²
+              </span>
+            )}
+          </div>
+
+          {/* =================================================
+              FOOTER
+          ================================================== */}
+
+          <div style={styles.footer}>
+            <div>
+              <div
+                style={
+                  styles.priceLabel
+                }
+              >
+                Price
+              </div>
+
+              <span style={styles.price}>
+                {formatPrice(
+                  property.property_price
+                )}
+              </span>
+            </div>
+
+            <button
+              type="button"
+              style={styles.bookBtn}
+              onClick={handleBook}
+            >
+              {user
+                ? "Book Viewing"
+                : "Login to Book"}
+            </button>
+          </div>
+
+          {/* =================================================
+              PROMOTE BUTTON
+          ================================================== */}
+
+          {user && (
+            <button
+              type="button"
+              style={
+                styles.promoteBtn
+              }
+              onClick={
+                handlePromoteClick
+              }
+            >
+              ⭐ Promote Property
+            </button>
+          )}
         </div>
-      </div>
-    </article>
+      </article>
+
+      {/* =====================================================
+          PROMOTION MODAL
+      ====================================================== */}
+
+      {showPromote && (
+        <div
+          style={styles.modalBackdrop}
+          onClick={() =>
+            setShowPromote(false)
+          }
+        >
+          <div
+            style={styles.modal}
+            onClick={(event) =>
+              event.stopPropagation()
+            }
+          >
+            {/* CLOSE */}
+
+            <button
+              type="button"
+              style={styles.closeBtn}
+              onClick={() =>
+                setShowPromote(false)
+              }
+            >
+              ×
+            </button>
+
+            <div
+              style={
+                styles.modalEyebrow
+              }
+            >
+              ECLIX ROYAL HOMES
+            </div>
+
+            <h2
+              style={
+                styles.modalTitle
+              }
+            >
+              Promote Your Property
+            </h2>
+
+            <p
+              style={
+                styles.modalSubtitle
+              }
+            >
+              Get your property featured
+              and give it greater
+              visibility.
+            </p>
+
+            {/* PROPERTY */}
+
+            <div
+              style={
+                styles.propertyPreview
+              }
+            >
+              <strong>
+                {property.property_name ||
+                  "Property"}
+              </strong>
+
+              <span>
+                {property.property_location ||
+                  ""}
+              </span>
+            </div>
+
+            {/* PACKAGES */}
+
+            <div
+              style={
+                styles.packageGrid
+              }
+            >
+              <button
+                type="button"
+                style={{
+                  ...styles.package,
+                  ...(selectedPackage ===
+                  "featured_7"
+                    ? styles.packageActive
+                    : {}),
+                }}
+                onClick={() =>
+                  setSelectedPackage(
+                    "featured_7"
+                  )
+                }
+              >
+                <span
+                  style={
+                    styles.packageDays
+                  }
+                >
+                  7 DAYS
+                </span>
+
+                <strong>
+                  KSh 500
+                </strong>
+              </button>
+
+              <button
+                type="button"
+                style={{
+                  ...styles.package,
+                  ...(selectedPackage ===
+                  "featured_14"
+                    ? styles.packageActive
+                    : {}),
+                }}
+                onClick={() =>
+                  setSelectedPackage(
+                    "featured_14"
+                  )
+                }
+              >
+                <span
+                  style={
+                    styles.packageDays
+                  }
+                >
+                  14 DAYS
+                </span>
+
+                <strong>
+                  KSh 1,000
+                </strong>
+              </button>
+
+              <button
+                type="button"
+                style={{
+                  ...styles.package,
+                  ...(selectedPackage ===
+                  "featured_30"
+                    ? styles.packageActive
+                    : {}),
+                }}
+                onClick={() =>
+                  setSelectedPackage(
+                    "featured_30"
+                  )
+                }
+              >
+                <span
+                  style={
+                    styles.packageDays
+                  }
+                >
+                  30 DAYS
+                </span>
+
+                <strong>
+                  KSh 2,000
+                </strong>
+              </button>
+            </div>
+
+            {/* PHONE */}
+
+            <form
+              onSubmit={
+                handleMpesaPayment
+              }
+            >
+              <label
+                style={
+                  styles.phoneLabel
+                }
+              >
+                M-Pesa Phone Number
+              </label>
+
+              <input
+                type="tel"
+                value={phone}
+                onChange={(event) =>
+                  setPhone(
+                    event.target.value
+                  )
+                }
+                placeholder="07XXXXXXXX"
+                style={styles.phoneInput}
+                autoComplete="tel"
+              />
+
+              {paymentError && (
+                <div
+                  style={
+                    styles.errorMessage
+                  }
+                >
+                  {paymentError}
+                </div>
+              )}
+
+              {paymentMessage && (
+                <div
+                  style={
+                    styles.successMessage
+                  }
+                >
+                  {paymentMessage}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={
+                  paymentLoading
+                }
+                style={{
+                  ...styles.payBtn,
+                  ...(paymentLoading
+                    ? styles.payBtnDisabled
+                    : {}),
+                }}
+              >
+                {paymentLoading
+                  ? "Sending M-Pesa Prompt..."
+                  : "💳 Pay with M-Pesa"}
+              </button>
+            </form>
+
+            <p
+              style={
+                styles.secureText
+              }
+            >
+              🔒 Secure payment through
+              M-Pesa
+            </p>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -694,7 +1146,216 @@ const styles = {
     letterSpacing: "0.04em",
     cursor: "pointer",
     whiteSpace: "nowrap",
-    transition:
-      "opacity 0.2s ease, transform 0.2s ease",
+  },
+
+  // ==========================================================
+  // PROMOTE BUTTON
+  // ==========================================================
+
+  promoteBtn: {
+    width: "100%",
+    marginTop: "12px",
+    background:
+      "linear-gradient(135deg, #d4af37, #b8941f)",
+    color: "#0a0e1a",
+    border: "none",
+    borderRadius: "10px",
+    padding: "11px 14px",
+    fontSize: "0.78rem",
+    fontWeight: 900,
+    letterSpacing: "0.05em",
+    cursor: "pointer",
+  },
+
+  // ==========================================================
+  // MODAL
+  // ==========================================================
+
+  modalBackdrop: {
+    position: "fixed",
+    inset: 0,
+    background:
+      "rgba(0, 0, 0, 0.78)",
+    backdropFilter: "blur(8px)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "20px",
+    zIndex: 9999,
+  },
+
+  modal: {
+    position: "relative",
+    width: "100%",
+    maxWidth: "520px",
+    maxHeight: "90vh",
+    overflowY: "auto",
+    background: "#111827",
+    border:
+      "1px solid rgba(212,175,55,0.3)",
+    borderRadius: "20px",
+    padding: "30px",
+    boxShadow:
+      "0 25px 80px rgba(0,0,0,0.5)",
+  },
+
+  closeBtn: {
+    position: "absolute",
+    top: "15px",
+    right: "15px",
+    width: "35px",
+    height: "35px",
+    borderRadius: "50%",
+    border:
+      "1px solid rgba(255,255,255,0.1)",
+    background:
+      "rgba(255,255,255,0.05)",
+    color: "#fff",
+    fontSize: "24px",
+    cursor: "pointer",
+    lineHeight: "30px",
+  },
+
+  modalEyebrow: {
+    color: "#d4af37",
+    fontSize: "0.68rem",
+    letterSpacing: "0.18em",
+    fontWeight: 800,
+    marginBottom: "8px",
+  },
+
+  modalTitle: {
+    color: "#f8f4e8",
+    fontFamily:
+      "'Playfair Display', serif",
+    fontSize: "1.8rem",
+    margin: "0 0 8px",
+  },
+
+  modalSubtitle: {
+    color: "#9ca3af",
+    fontSize: "0.85rem",
+    lineHeight: 1.5,
+    marginBottom: "20px",
+  },
+
+  propertyPreview: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "4px",
+    padding: "13px 15px",
+    background: "#0a0e1a",
+    borderRadius: "10px",
+    marginBottom: "18px",
+    border:
+      "1px solid rgba(255,255,255,0.06)",
+  },
+
+  packageGrid: {
+    display: "grid",
+    gridTemplateColumns:
+      "repeat(3, 1fr)",
+    gap: "10px",
+    marginBottom: "20px",
+  },
+
+  package: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "7px",
+    alignItems: "center",
+    padding: "15px 8px",
+    borderRadius: "12px",
+    border:
+      "1px solid rgba(212,175,55,0.18)",
+    background: "#0a0e1a",
+    color: "#f8f4e8",
+    cursor: "pointer",
+    fontSize: "0.85rem",
+  },
+
+  packageActive: {
+    border:
+      "2px solid #d4af37",
+    background:
+      "rgba(212,175,55,0.1)",
+  },
+
+  packageDays: {
+    color: "#9ca3af",
+    fontSize: "0.65rem",
+    letterSpacing: "0.08em",
+  },
+
+  phoneLabel: {
+    display: "block",
+    color: "#f8f4e8",
+    fontSize: "0.78rem",
+    fontWeight: 700,
+    marginBottom: "7px",
+  },
+
+  phoneInput: {
+    width: "100%",
+    boxSizing: "border-box",
+    padding: "13px 15px",
+    borderRadius: "10px",
+    border:
+      "1px solid rgba(212,175,55,0.2)",
+    background: "#0a0e1a",
+    color: "#f8f4e8",
+    fontSize: "0.9rem",
+    outline: "none",
+    marginBottom: "12px",
+  },
+
+  payBtn: {
+    width: "100%",
+    padding: "14px",
+    border: "none",
+    borderRadius: "10px",
+    background: "#d4af37",
+    color: "#0a0e1a",
+    fontSize: "0.85rem",
+    fontWeight: 900,
+    cursor: "pointer",
+  },
+
+  payBtnDisabled: {
+    opacity: 0.6,
+    cursor: "not-allowed",
+  },
+
+  errorMessage: {
+    padding: "10px 12px",
+    borderRadius: "8px",
+    background:
+      "rgba(239,68,68,0.1)",
+    border:
+      "1px solid rgba(239,68,68,0.25)",
+    color: "#fca5a5",
+    fontSize: "0.78rem",
+    marginBottom: "12px",
+  },
+
+  successMessage: {
+    padding: "10px 12px",
+    borderRadius: "8px",
+    background:
+      "rgba(34,197,94,0.1)",
+    border:
+      "1px solid rgba(34,197,94,0.25)",
+    color: "#86efac",
+    fontSize: "0.78rem",
+    marginBottom: "12px",
+    lineHeight: 1.5,
+  },
+
+  secureText: {
+    textAlign: "center",
+    color: "#6b7280",
+    fontSize: "0.7rem",
+    marginTop: "15px",
+    marginBottom: 0,
   },
 };
