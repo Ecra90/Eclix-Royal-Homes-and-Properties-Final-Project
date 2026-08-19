@@ -33,18 +33,13 @@ function getFavourites() {
       .map(Number)
       .filter((id) => !Number.isNaN(id));
   } catch (error) {
-    console.error(
-      "Could not read favourites:",
-      error
-    );
-
+    console.error("Could not read favourites:", error);
     return [];
   }
 }
 
 function isFavourite(propertyId) {
   const id = Number(propertyId);
-
   return getFavourites().includes(id);
 }
 
@@ -60,10 +55,7 @@ function addFavourite(propertyId) {
   if (!favourites.includes(id)) {
     localStorage.setItem(
       FAVS_KEY,
-      JSON.stringify([
-        ...favourites,
-        id,
-      ])
+      JSON.stringify([...favourites, id])
     );
   }
 }
@@ -71,11 +63,9 @@ function addFavourite(propertyId) {
 function removeFavourite(propertyId) {
   const id = Number(propertyId);
 
-  const favourites =
-    getFavourites().filter(
-      (favouriteId) =>
-        favouriteId !== id
-    );
+  const favourites = getFavourites().filter(
+    (favouriteId) => favouriteId !== id
+  );
 
   localStorage.setItem(
     FAVS_KEY,
@@ -101,14 +91,13 @@ export default function PropertyCard({
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  // IMPORTANT:
-  // Hooks MUST be called before any conditional return.
+  // ==========================================================
+  // STATE
+  // ==========================================================
 
   const [fav, setFav] = useState(() =>
     property
-      ? isFavourite(
-          Number(property.property_id)
-        )
+      ? isFavourite(Number(property.property_id))
       : false
   );
 
@@ -118,8 +107,7 @@ export default function PropertyCard({
   const [selectedPackage, setSelectedPackage] =
     useState("featured_7");
 
-  const [phone, setPhone] =
-    useState("");
+  const [phone, setPhone] = useState("");
 
   const [paymentLoading, setPaymentLoading] =
     useState(false);
@@ -130,25 +118,22 @@ export default function PropertyCard({
   const [paymentError, setPaymentError] =
     useState("");
 
-  // ----------------------------------------------------------
+  // ==========================================================
   // SAFETY CHECK
-  // ----------------------------------------------------------
+  // ==========================================================
 
   if (!property) {
     return null;
   }
 
-  const propertyId = Number(
-    property.property_id
-  );
+  const propertyId = Number(property.property_id);
 
   // ==========================================================
-  // IMAGE
+  // IMAGE URL
   // ==========================================================
 
   const getImageUrl = () => {
-    const photo =
-      property.property_photo;
+    const photo = property.property_photo;
 
     if (
       !photo ||
@@ -157,13 +142,13 @@ export default function PropertyCard({
       return "/placeholder-property.jpg";
     }
 
-    const cleanPhoto =
-      photo.trim();
+    const cleanPhoto = photo.trim();
 
     if (!cleanPhoto) {
       return "/placeholder-property.jpg";
     }
 
+    // Cloudinary / external image
     if (
       cleanPhoto.startsWith("https://") ||
       cleanPhoto.startsWith("http://")
@@ -171,12 +156,12 @@ export default function PropertyCard({
       return cleanPhoto;
     }
 
-    if (
-      cleanPhoto.includes("cloudinary")
-    ) {
+    // If backend already returned a Cloudinary URL
+    if (cleanPhoto.includes("cloudinary")) {
       return cleanPhoto;
     }
 
+    // Old/local backend upload fallback
     return `${API_URL}/static/uploads/${encodeURIComponent(
       cleanPhoto
     )}`;
@@ -201,14 +186,11 @@ export default function PropertyCard({
       return "Price on request";
     }
 
-    return new Intl.NumberFormat(
-      "en-KE",
-      {
-        style: "currency",
-        currency: "KES",
-        maximumFractionDigits: 0,
-      }
-    ).format(numericPrice);
+    return new Intl.NumberFormat("en-KE", {
+      style: "currency",
+      currency: "KES",
+      maximumFractionDigits: 0,
+    }).format(numericPrice);
   };
 
   // ==========================================================
@@ -231,7 +213,6 @@ export default function PropertyCard({
         "Invalid property ID:",
         property.property_id
       );
-
       return;
     }
 
@@ -245,9 +226,7 @@ export default function PropertyCard({
 
     setFav(newFavState);
 
-    if (
-      typeof onFavToggle === "function"
-    ) {
+    if (typeof onFavToggle === "function") {
       onFavToggle(
         propertyId,
         newFavState
@@ -275,13 +254,10 @@ export default function PropertyCard({
         "Invalid property ID:",
         property.property_id
       );
-
       return;
     }
 
-    navigate(
-      `/listings/${propertyId}/book`
-    );
+    navigate(`/listings/${propertyId}/book`);
   };
 
   // ==========================================================
@@ -305,9 +281,7 @@ export default function PropertyCard({
   // START MPESA PAYMENT
   // ==========================================================
 
-  const handleMpesaPayment = async (
-    event
-  ) => {
+  const handleMpesaPayment = async (event) => {
     event.preventDefault();
     event.stopPropagation();
 
@@ -323,50 +297,49 @@ export default function PropertyCard({
       !propertyId ||
       Number.isNaN(propertyId)
     ) {
-      setPaymentError(
-        "Invalid property."
-      );
-
+      setPaymentError("Invalid property.");
       return;
     }
 
-    const cleanPhone =
-      phone.trim();
+    const cleanPhone = phone.trim();
 
     if (!cleanPhone) {
       setPaymentError(
         "Please enter your M-Pesa phone number."
       );
-
       return;
     }
 
     setPaymentLoading(true);
 
     try {
+      console.log(
+        "Starting M-Pesa payment...",
+        {
+          API_URL,
+          propertyId,
+          selectedPackage,
+          phone: cleanPhone,
+        }
+      );
+
       const response = await fetch(
         `${API_URL}/api/payments/property-promote`,
         {
           method: "POST",
-
           credentials: "include",
-
           headers: {
-            "Content-Type":
-              "application/json",
+            "Content-Type": "application/json",
           },
-
           body: JSON.stringify({
             property_id: propertyId,
-            package:
-              selectedPackage,
+            package: selectedPackage,
             phone: cleanPhone,
           }),
         }
       );
 
-      const text =
-        await response.text();
+      const text = await response.text();
 
       let data = {};
 
@@ -375,6 +348,11 @@ export default function PropertyCard({
           ? JSON.parse(text)
           : {};
       } catch {
+        console.error(
+          "Invalid server response:",
+          text
+        );
+
         throw new Error(
           "The payment server returned an invalid response."
         );
@@ -394,17 +372,26 @@ export default function PropertyCard({
       );
 
       setPhone("");
-
     } catch (error) {
       console.error(
         "M-Pesa payment error:",
         error
       );
 
-      setPaymentError(
-        error.message ||
-          "Payment could not be started."
-      );
+      // Better message for actual network/CORS errors
+      if (
+        error instanceof TypeError &&
+        error.message.toLowerCase().includes("fetch")
+      ) {
+        setPaymentError(
+          "Network error: unable to connect to the Eclix Royal Homes server. Please check that the backend is online and CORS is configured correctly."
+        );
+      } else {
+        setPaymentError(
+          error.message ||
+            "Payment could not be started."
+        );
+      }
     } finally {
       setPaymentLoading(false);
     }
@@ -423,13 +410,10 @@ export default function PropertyCard({
         "Invalid property ID:",
         property.property_id
       );
-
       return;
     }
 
-    navigate(
-      `/listings/${propertyId}`
-    );
+    navigate(`/listings/${propertyId}`);
   };
 
   // ==========================================================
@@ -442,10 +426,7 @@ export default function PropertyCard({
 
   const shortDescription =
     description.length > 100
-      ? `${description.substring(
-          0,
-          100
-        )}...`
+      ? `${description.substring(0, 100)}...`
       : description;
 
   // ==========================================================
@@ -469,9 +450,7 @@ export default function PropertyCard({
           }
         }}
       >
-        {/* ===================================================
-            IMAGE
-        ==================================================== */}
+        {/* IMAGE */}
 
         <div style={styles.imgWrap}>
           <img
@@ -496,9 +475,7 @@ export default function PropertyCard({
                 getImageUrl()
               );
 
-              event.currentTarget.onerror =
-                null;
-
+              event.currentTarget.onerror = null;
               event.currentTarget.src =
                 "/placeholder-property.jpg";
             }}
@@ -513,9 +490,7 @@ export default function PropertyCard({
               property.property_featured
             ) === 1 && (
               <span
-                style={
-                  styles.featuredBadge
-                }
+                style={styles.featuredBadge}
               >
                 ⭐ Featured
               </span>
@@ -525,9 +500,7 @@ export default function PropertyCard({
               property.property_for_sale
             ) === 1 && (
               <span
-                style={
-                  styles.saleBadge
-                }
+                style={styles.saleBadge}
               >
                 For Sale
               </span>
@@ -567,16 +540,12 @@ export default function PropertyCard({
           </button>
         </div>
 
-        {/* ===================================================
-            INFORMATION
-        ==================================================== */}
+        {/* INFORMATION */}
 
         <div style={styles.info}>
           <div style={styles.location}>
             <span
-              style={
-                styles.locationIcon
-              }
+              style={styles.locationIcon}
             >
               📍
             </span>
@@ -601,58 +570,43 @@ export default function PropertyCard({
           <div style={styles.specs}>
             <span style={styles.spec}>
               <span
-                style={
-                  styles.specIcon
-                }
+                style={styles.specIcon}
               >
                 🛏
               </span>
 
-              {property.property_beds ||
-                0}{" "}
-              beds
+              {property.property_beds || 0} beds
             </span>
 
             <span style={styles.spec}>
               <span
-                style={
-                  styles.specIcon
-                }
+                style={styles.specIcon}
               >
                 🚿
               </span>
 
-              {property.property_bath ||
-                0}{" "}
-              baths
+              {property.property_bath || 0} baths
             </span>
 
             {property.property_size && (
               <span style={styles.spec}>
                 <span
-                  style={
-                    styles.specIcon
-                  }
+                  style={styles.specIcon}
                 >
                   📐
                 </span>
 
-                {property.property_size}{" "}
-                m²
+                {property.property_size} m²
               </span>
             )}
           </div>
 
-          {/* =================================================
-              FOOTER
-          ================================================== */}
+          {/* FOOTER */}
 
           <div style={styles.footer}>
             <div>
               <div
-                style={
-                  styles.priceLabel
-                }
+                style={styles.priceLabel}
               >
                 Price
               </div>
@@ -675,19 +629,13 @@ export default function PropertyCard({
             </button>
           </div>
 
-          {/* =================================================
-              PROMOTE BUTTON
-          ================================================== */}
+          {/* PROMOTE BUTTON */}
 
           {user && (
             <button
               type="button"
-              style={
-                styles.promoteBtn
-              }
-              onClick={
-                handlePromoteClick
-              }
+              style={styles.promoteBtn}
+              onClick={handlePromoteClick}
             >
               ⭐ Promote Property
             </button>
@@ -695,9 +643,7 @@ export default function PropertyCard({
         </div>
       </article>
 
-      {/* =====================================================
-          PROMOTION MODAL
-      ====================================================== */}
+      {/* PROMOTION MODAL */}
 
       {showPromote && (
         <div
@@ -725,37 +671,28 @@ export default function PropertyCard({
             </button>
 
             <div
-              style={
-                styles.modalEyebrow
-              }
+              style={styles.modalEyebrow}
             >
               ECLIX ROYAL HOMES
             </div>
 
             <h2
-              style={
-                styles.modalTitle
-              }
+              style={styles.modalTitle}
             >
               Promote Your Property
             </h2>
 
             <p
-              style={
-                styles.modalSubtitle
-              }
+              style={styles.modalSubtitle}
             >
-              Get your property featured
-              and give it greater
-              visibility.
+              Get your property featured and
+              give it greater visibility.
             </p>
 
             {/* PROPERTY */}
 
             <div
-              style={
-                styles.propertyPreview
-              }
+              style={styles.propertyPreview}
             >
               <strong>
                 {property.property_name ||
@@ -771,9 +708,7 @@ export default function PropertyCard({
             {/* PACKAGES */}
 
             <div
-              style={
-                styles.packageGrid
-              }
+              style={styles.packageGrid}
             >
               <button
                 type="button"
@@ -791,9 +726,7 @@ export default function PropertyCard({
                 }
               >
                 <span
-                  style={
-                    styles.packageDays
-                  }
+                  style={styles.packageDays}
                 >
                   7 DAYS
                 </span>
@@ -819,9 +752,7 @@ export default function PropertyCard({
                 }
               >
                 <span
-                  style={
-                    styles.packageDays
-                  }
+                  style={styles.packageDays}
                 >
                   14 DAYS
                 </span>
@@ -847,9 +778,7 @@ export default function PropertyCard({
                 }
               >
                 <span
-                  style={
-                    styles.packageDays
-                  }
+                  style={styles.packageDays}
                 >
                   30 DAYS
                 </span>
@@ -863,14 +792,10 @@ export default function PropertyCard({
             {/* PHONE */}
 
             <form
-              onSubmit={
-                handleMpesaPayment
-              }
+              onSubmit={handleMpesaPayment}
             >
               <label
-                style={
-                  styles.phoneLabel
-                }
+                style={styles.phoneLabel}
               >
                 M-Pesa Phone Number
               </label>
@@ -910,9 +835,7 @@ export default function PropertyCard({
 
               <button
                 type="submit"
-                disabled={
-                  paymentLoading
-                }
+                disabled={paymentLoading}
                 style={{
                   ...styles.payBtn,
                   ...(paymentLoading
@@ -926,13 +849,8 @@ export default function PropertyCard({
               </button>
             </form>
 
-            <p
-              style={
-                styles.secureText
-              }
-            >
-              🔒 Secure payment through
-              M-Pesa
+            <p style={styles.secureText}>
+              🔒 Secure payment through M-Pesa
             </p>
           </div>
         </div>
@@ -972,8 +890,7 @@ const styles = {
     height: "100%",
     objectFit: "cover",
     display: "block",
-    transition:
-      "transform 0.5s ease",
+    transition: "transform 0.5s ease",
   },
 
   overlay: {
@@ -1037,8 +954,7 @@ const styles = {
     alignItems: "center",
     justifyContent: "center",
     cursor: "pointer",
-    transition:
-      "all 0.2s ease",
+    transition: "all 0.2s ease",
     zIndex: 5,
   },
 
@@ -1148,10 +1064,6 @@ const styles = {
     whiteSpace: "nowrap",
   },
 
-  // ==========================================================
-  // PROMOTE BUTTON
-  // ==========================================================
-
   promoteBtn: {
     width: "100%",
     marginTop: "12px",
@@ -1166,10 +1078,6 @@ const styles = {
     letterSpacing: "0.05em",
     cursor: "pointer",
   },
-
-  // ==========================================================
-  // MODAL
-  // ==========================================================
 
   modalBackdrop: {
     position: "fixed",
@@ -1275,8 +1183,7 @@ const styles = {
   },
 
   packageActive: {
-    border:
-      "2px solid #d4af37",
+    border: "2px solid #d4af37",
     background:
       "rgba(212,175,55,0.1)",
   },
