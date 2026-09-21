@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import PropertyCard from "../components/PropertyCard";
 
@@ -21,107 +21,201 @@ export default function Listings() {
 
   const [favIds, setFavIds] = useState([]);
 
-  // ─────────────────────────────────────────────
-  // LOAD FAVOURITES
-  // ─────────────────────────────────────────────
-  useEffect(() => {
-    fetch(`${API_URL}/api/favourites`, {
-      method: "GET",
-      credentials: "include",
-    })
-      .then(async (response) => {
-        const text = await response.text();
+  /*
+   * Safely read JSON from the backend.
+   * This prevents the application from crashing when
+   * Vercel/Flask returns HTML instead of JSON.
+   */
+  const getResponseData = async (response) => {
+    const contentType =
+      response.headers.get("content-type") || "";
 
-        if (!text) {
-          return { favourites: [] };
-        }
+    const text = await response.text();
 
-        try {
-          return JSON.parse(text);
-        } catch {
-          console.error("Invalid favourites response:", text);
-          return { favourites: [] };
-        }
-      })
-      .then((data) => {
-        setFavIds(
-          (data.favourites || []).map(
-            (favourite) => favourite.property_id
-          )
+    console.log("=================================");
+    console.log("API STATUS:", response.status);
+    console.log("API CONTENT TYPE:", contentType);
+    console.log("API RESPONSE:", text);
+    console.log("=================================");
+
+    if (!text.trim()) {
+      throw new Error(
+        `Server returned an empty response (${response.status}).`
+      );
+    }
+
+    try {
+      return JSON.parse(text);
+    } catch (error) {
+      console.error(
+        "❌ Backend returned invalid JSON:",
+        text
+      );
+
+      if (
+        text.trim().startsWith("<!DOCTYPE") ||
+        text.trim().startsWith("<html")
+      ) {
+        throw new Error(
+          `Backend returned an HTML page instead of JSON (HTTP ${response.status}).`
         );
-      })
-      .catch((error) => {
-        console.error("Failed to load favourites:", error);
-        setFavIds([]);
-      });
-  }, []);
+      }
 
-  // ─────────────────────────────────────────────
-  // LOAD PROPERTIES
-  // ─────────────────────────────────────────────
-  useEffect(() => {
-    const loadProperties = async () => {
-      setLoading(true);
-      setError("");
+      throw new Error(
+        `Backend returned invalid JSON (HTTP ${response.status}).`
+      );
+    }
+  };
 
-      try {
-        const url = query
-          ? `${API_URL}/api/properties?search=${encodeURIComponent(query)}`
-          : `${API_URL}/api/properties`;
-
-        const response = await fetch(url, {
+  /*
+   * LOAD FAVOURITES
+   */
+  const loadFavourites = useCallback(async () => {
+    try {
+      const response = await fetch(
+        `${API_URL}/api/favourites`,
+        {
           method: "GET",
           credentials: "include",
-        });
-
-        const text = await response.text();
-
-        console.log("PROPERTIES STATUS:", response.status);
-        console.log("PROPERTIES RESPONSE:", text);
-
-        if (!response.ok) {
-          throw new Error(
-            `Failed to load properties (${response.status})`
-          );
+          headers: {
+            Accept: "application/json",
+          },
         }
+      );
 
-        if (!text) {
-          throw new Error("The server returned an empty response.");
-        }
-
-        let data;
-
-        try {
-          data = JSON.parse(text);
-        } catch {
-          throw new Error("The server returned invalid JSON.");
-        }
-
-        setProperties(data.properties || []);
-      } catch (error) {
-        console.error("Properties error:", error);
-        setProperties([]);
-        setError(error.message || "Unable to load properties.");
-      } finally {
-        setLoading(false);
+      /*
+       * A user who isn't logged in may receive 401.
+       * That should NOT prevent the listings from loading.
+       */
+      if (response.status === 401) {
+        setFavIds([]);
+        return;
       }
-    };
 
-    loadProperties();
+      const data = await getResponseData(response);
+
+      if (!response.ok) {
+        throw new Error(
+          data?.error ||
+            `Failed to load favourites (${response.status})`
+        );
+      }
+
+      setFavIds(
+        Array.isArray(data?.favourites)
+          ? data.favourites.map(
+              (favourite) => favourite.property_id
+            )
+          : []
+      );
+    } catch (error) {
+      console.error(
+        "Failed to load favourites:",
+        error
+      );
+
+      setFavIds([]);
+    }
+  }, []);
+
+  /*
+   * LOAD PROPERTIES
+   */
+  const loadProperties = useCallback(async () => {
+    setLoading(true);
+    setError("");
+
+    try {
+      const url = query
+        ? `${API_URL}/api/properties?search=${encodeURIComponent(
+            query
+          )}`
+        : `${API_URL}/api/properties`;
+
+      console.log("Loading properties from:", url);
+
+      const response = await fetch(url, {
+        method: "GET",
+        credentials: "include",
+        headers: {
+          Accept: "application/json",
+        },
+      });
+
+      const data = await getResponseData(response);
+
+      if (!response.ok) {
+        throw new Error(
+          data?.error ||
+            data?.message ||
+            `Failed to load properties (${response.status})`
+        );
+      }
+
+      if (!Array.isArray(data?.properties)) {
+        console.warn(
+          "Backend response does not contain a properties array:",
+          data
+        );
+
+        setProperties([]);
+        return;
+      }
+
+      setProperties(data.properties);
+    } catch (error) {
+      console.error(
+        "❌ Properties error:",
+        error
+      );
+
+      setProperties([]);
+
+      setError(
+        error.message ||
+          "Unable to load properties."
+      );
+    } finally {
+      setLoading(false);
+    }
   }, [query]);
 
-  // ─────────────────────────────────────────────
-  // SEARCH
-  // ─────────────────────────────────────────────
+  /*
+   * Load favourites once.
+   */
+  useEffect(() => {
+    loadFavourites();
+  }, [loadFavourites]);
+
+  /*
+   * Load properties whenever the search query changes.
+   */
+  useEffect(() => {
+    loadProperties();
+  }, [loadProperties]);
+
+  /*
+   * SEARCH
+   */
   const handleSearch = (e) => {
     e.preventDefault();
-    setQuery(search);
+    setQuery(search.trim());
+  };
+
+  /*
+   * RETRY
+   */
+  const handleRetry = () => {
+    loadProperties();
+    loadFavourites();
   };
 
   return (
     <div style={styles.page}>
       <div style={styles.header}>
-        <p style={styles.eyebrow}>Exclusive Collection</p>
+        <p style={styles.eyebrow}>
+          Exclusive Collection
+        </p>
 
         <h1 style={styles.title}>
           Luxury Listings
@@ -139,7 +233,9 @@ export default function Listings() {
             style={styles.input}
             placeholder="Search by name, location…"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) =>
+              setSearch(e.target.value)
+            }
           />
 
           <button
@@ -178,11 +274,12 @@ export default function Listings() {
             Loading properties…
           </p>
         </div>
-
       ) : error ? (
         /* ERROR */
         <div style={styles.empty}>
-          <p style={{ fontSize: "3rem" }}>⚠️</p>
+          <p style={{ fontSize: "3rem" }}>
+            ⚠️
+          </p>
 
           <p
             style={{
@@ -204,26 +301,27 @@ export default function Listings() {
 
           <button
             style={styles.retryBtn}
-            onClick={() => setQuery(query)}
+            onClick={handleRetry}
           >
             Try Again
           </button>
         </div>
-
       ) : properties.length === 0 ? (
         /* NO PROPERTIES */
         <div style={styles.empty}>
-          <p style={{ fontSize: "3rem" }}>🏚</p>
+          <p style={{ fontSize: "3rem" }}>
+            🏚
+          </p>
 
           <p
             style={{
               color: "#9ca3af",
             }}
           >
-            No properties found matching your search.
+            No properties found matching your
+            search.
           </p>
         </div>
-
       ) : (
         /* PROPERTIES */
         <div style={styles.grid}>
@@ -237,7 +335,9 @@ export default function Listings() {
               onFavToggle={(id, added) => {
                 setFavIds((ids) =>
                   added
-                    ? [...ids, id]
+                    ? ids.includes(id)
+                      ? ids
+                      : [...ids, id]
                     : ids.filter(
                         (existingId) =>
                           existingId !== id
